@@ -259,7 +259,7 @@ function setGenericParameter(afParams, oneLinkParam, searchKey, newParamValue = 
 
 <script type="text/javascript">
   window.onload = function () {
-    document.getElementById('input_url').innerHTML = window.location.href;
+
     const onelinkGenerator = new window.AF.OneLinkUrlGenerator( 
       {oneLinkURL: "https://jcoinpay.onelink.me/4oen/",
       pidKeysList: ['pid', 'utm_source'], 
