@@ -271,7 +271,7 @@ function setGenericParameter(afParams, oneLinkParam, searchKey, newParamValue = 
   onelinkGenerator.setAdset("af_adset");
   onelinkGenerator.setAd("af_ad");
   onelinkGenerator.setCustomParameter("af_prt", "af_prt");
-  onelinkGenerator.setCustomParameter("af_dp", "af_dp”);
+  onelinkGenerator.setCustomParameter("af_dp", "af_dp");
   onelinkGenerator.setCustomParameter("is_retargeting", "is_retargeting");
 
 
