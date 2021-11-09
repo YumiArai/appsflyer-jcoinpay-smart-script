@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-132777338-1"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+    gtag('js', new Date());
+    gtag('config', 'UA-132777338-1');
+  </script>
+
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta http-equiv="imagetoolbar" content="no">
+  <meta name="format-detection" content="telephone=no,address=no,email=no">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="description" content="J-Coin Payでカンタンにコミケ99でキャッシュレス決済!">
+  <meta name="keywords" content="J-Coin Pay,j-coin,jcoin,キャッシュレス,決済,みずほ,みずほ銀行" />
+  <meta property="og:url" content="https://j-coin.jp/comike99/">
+  <meta property="og:title" content="J-Coin Payでカンタンにコミケ99でキャッシュレス決済!">
+  <meta property="og:type" content="website">
+  <meta property="og:description" content="コミケ99でのお買い物10％ボーナス還元！">
+  <meta property="og:image" content="https://j-coin.jp/comike99/img/ogp.png">
+  <meta property="og:site_name" content="J-Coin Pay - あなたのスマホに、ATMを。">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="J-Coin Pay - 銀行の送金・決済アプリ">
+  <meta name="twitter:title" content="J-Coin Payでカンタンにコミケ99でキャッシュレス決済!">
+  <meta name="twitter:description" content="コミケ99でのお買い物10％ボーナス還元！">
+  <meta name="twitter:image:src" content="https://j-coin.jp/comike99/img/ogp.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/images/favicon-16x16.png">
+  <link rel="manifest" href="/assets/images/site.webmanifest">
+  <link rel="mask-icon" href="/assets/images/safari-pinned-tab.svg" color="#f17091">
+  <link rel="shortcut icon" href="/assets/images/favicon.ico">
+  <meta name="msapplication-TileColor" content="#f17091">
+  <meta name="msapplication-config" content="/assets/images/browserconfig.xml">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="stylesheet" href="css/style.css">
+  <title>コミケでキャッシュレス決済！｜J-Coin Pay - 銀行の送金・決済アプリ</title>
+  <!--[if lt IE 9]>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.min.js"></script>
+<![endif]-->
+
+<script type="text/javascript">
+// ここから大元のスクリプト開始
+
+'use strict';
+
+class OneLinkUrlGenerator {
+    // TODO -  add params documentation
+    // oneLinkURL - your own basic OneLink URL
+    // ...
+    constructor({
+                    oneLinkURL,
+                    pidKeysList = [],
+                    pidStaticValue = null,
+                    campaignKeysList = [],
+                    campaignStaticValue = null,
+                    pidOverrideList = [],
+                    gclIdParam = 'af_sub5',
+                    skipList = ["facebook"]
+                } = {}) {
+
+        console.debug("Constructing OneLink URL generator")
+        if(oneLinkURL === undefined || typeof oneLinkURL !== "string" || oneLinkURL === "") {
+            console.error("OneLinkUrlGenerator: oneLinkURL arg invalid");
+            return null;
+        }
+
+        this.oneLinkURL = oneLinkURL;
+        this.pidOverrideList = pidOverrideList;
+        this.gclIdParam = gclIdParam;
+        this.pidKeysList = pidKeysList;
+        this.pidStaticValue = pidStaticValue;
+        this.campaignKeysList = campaignKeysList;
+        this.campaignStaticValue = campaignStaticValue;
+        this.skipList = skipList
+
+        // OneLink parameters
+        this.campaign = getCampaignValue(this.campaignKeysList, this.campaignStaticValue);
+        this.mediaSource = getMediaSourceValue(this.pidKeysList, this.pidStaticValue, this.pidOverrideList);
+
+        // af_js_web=true will be added to every URL that was generated through this script
+        this.afParams = {af_js_web: "true"};
+    }
+
+    generateUrl(){
+        if (this.mediaSource == null) {
+            console.debug("No valid pid value was found. URL will no be changed");
+            return null;
+        }
+
+        // User was redirected using af_r parameter on an AppsFlyer attribution link
+        if (getParameterFromURL('af_redirect')) {
+            console.debug("This user comes from AppsFlyer by redirection and is ready to be attributed. \nKeep direct app store links.");
+            return null; // in this case, the original store links in the install buttons stay the same
+        }
+
+        if (this.isSkipped()) {
+            console.debug("This URL is marked for skipping. The script will return null");
+            // the caller should make sure a return value of null will leave the original link
+            return null;
+        }
+
+        // Google Ads
+        let pidValue = this.mediaSource;
+        const gclIdValue = getParameterFromURL('gclid');
+
+        if (gclIdValue) {
+            this.afParams[this.gclIdParam] = gclIdValue
+            console.debug("This user comes from Google AdWords");
+
+            const kwValue = getParameterFromURL('keyword');
+            if (!!kwValue) {
+                this.afParams['af_keywords'] = kwValue;
+                console.debug("There is a keyword associated with the ad");
+            }
+        // Other SRNs, custom networks and organic installs
+        } else {
+            console.debug("This user comes from SRN or custom network ");
+        }
+        const finalURL = this.oneLinkURL + '?pid=' + pidValue + '&c=' + this.campaign + stringifyAfParameters(this.afParams);
+        console.debug(`Generated OneLink URL ${finalURL}`)
+        return finalURL;
+    }
+
+    // Should this URL be skipped base on the HTTP referrer and the skipList[]
+    isSkipped() {
+        if (document.referrer && document.referrer != "") {
+            for (var i=0; i<this.skipList.length; i++) {
+                const skipStr = this.skipList[i];
+                if (document.referrer.toLowerCase().includes(skipStr.toLowerCase())) {
+                    console.debug("Skipping the script. HTTP referrer has: " + skipStr);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Setters for AF params
+    setDeepLinkValue(deepLinkValueParam, deepLinkValue = null){
+        setGenericParameter(this.afParams, 'deep_link_value', deepLinkValueParam, deepLinkValue);
+    }
+
+    setChannel(channelParam, channelValue = null){
+        setGenericParameter(this.afParams, 'af_channel', channelParam, channelValue);
+    }
+
+    setAdset(adsetParam, adsetValue = null){
+        setGenericParameter(this.afParams, 'af_adset', adsetParam, adsetValue);
+    }
+
+    setAd(adParam, adValue = null){
+        setGenericParameter(this.afParams, 'af_ad', adParam, adValue);
+    }
+
+    setAfSub1(afSub1Param, afSub1Value = null){
+        setGenericParameter(this.afParams, 'af_sub1', afSub1Param, afSub1Value);
+    }
+
+    setAfSub2(afSub2Param, afSub2Value = null){
+        setGenericParameter(this.afParams, 'this.afParams, af_sub2', afSub2Param, afSub2Value);
+    }
+
+    setAfSub3(afSub3Param, afSub3Value = null){
+        setGenericParameter(this.afParams, 'af_sub3', afSub3Param, afSub3Value);
+    }
+
+    setAfSub4(afSub4Param, afSub4Value = null){
+        setGenericParameter(this.afParams, 'af_sub4', afSub4Param, afSub4Value);
+    }
+
+    setAfSub5(afSub5Param, afSub5Value = null){
+        setGenericParameter(this.afParams, 'af_sub5', afSub5Param, afSub5Value);
+    }
+
+    setCustomParameter(searchKey, customKey, customValue = null) {
+        setGenericParameter(this.afParams, customKey, searchKey, customValue);
+    }
+}
+
+// Statis state-less functions
+function getParameterFromURL(name) {
+    const url = window.location.href;
+    name = name.replace(/[\[\]]/g, '\\$&');
+    var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, ''));
+}
+
+function getMediaSourceValue(pidKeysList, pidStaticValue, pidOverrideList){
+    let pidValue = null;
+
+    for (let pidKey of pidKeysList){
+        if (pidKey != null && getParameterFromURL(pidKey)) {
+            pidValue = getParameterFromURL(pidKey);
+        }
+    }
+
+    if (pidValue != null) {
+        if(pidOverrideList.hasOwnProperty(pidValue)) 
+            pidValue = pidOverrideList[pidValue];
+    } else {
+        pidValue = pidStaticValue;
+    }
+    return pidValue;
+}
+
+function getCampaignValue(campaignKeysList, campaignStaticValue){
+    for (let campaignKey of campaignKeysList){
+        if (getParameterFromURL(campaignKey)) {
+            return getParameterFromURL(campaignKey);
+        }
+    }
+
+    if(campaignStaticValue != null) {
+        return campaignStaticValue;
+    }
+
+    if (!!document.getElementsByTagName('title')[0]) {
+        return document.getElementsByTagName('title')[0].innerText;
+    }
+    return 'unknown';
+}
+
+// Create a string of param and value from
+function stringifyAfParameters(afParams) {
+    let finalStr = "";
+
+    for (var key of Object.keys(afParams)) {
+        console.debug(key + "->" + afParams[key]);
+        if (afParams[key] != null) {
+            finalStr += `&${key}=${afParams[key]}`;
+        } 
+    }
+    return finalStr;
+}
+
+function setGenericParameter(afParams, oneLinkParam, searchKey, newParamValue = null) {
+    const searchKeyResult = getParameterFromURL(searchKey);
+    if (searchKeyResult) {
+        afParams[oneLinkParam] = searchKeyResult;
+        console.debug(`${searchKey} found. ${oneLinkParam} = ${searchKeyResult}`)
+    } else {
+        if (newParamValue != null) {
+            afParams[oneLinkParam] = newParamValue;
+            console.debug(`${searchKey} not found. ${oneLinkParam} = ${newParamValue}`)
+        } else {
+            console.debug(`${searchKey} not found and newParamValue is null. Skipping.`)
+        }
+    }
+}
+
+(function(){
+    window.AF = Object.assign((window.AF || {}),{OneLinkUrlGenerator: OneLinkUrlGenerator});
+})();
+  </script>
+  
+<script type="text/javascript">
+
+    window.onload = function () {
+      const onelinkGenerator =  new window.AF.OneLinkUrlGenerator(
+        {oneLinkURL: "https://jcoinpay.onelink.me/4oen/", 
+         pidKeysList: ['pid', 'utm_source'], 
+         pidStaticValue: 'COMIKE',   // 受信URLに pid, utm_source パラメが存在しない場合、メディアソース名の固定値として使用します。必要に応じて変更してください。
+         campaignKeysList: ['c', 'utm_campaign'],
+         campaignStaticValue: 'LP_Organic'   // 受信URLに c, utm_campaign パラメが存在しない場合、キャンペーン名の固定値として使用します。必要に応じて変更してください。
+      });
+      
+      onelinkGenerator.setAdset("af_adset");
+      onelinkGenerator.setAd("af_ad");
+      onelinkGenerator.setCustomParameter("af_prt", "af_prt");
+      onelinkGenerator.setCustomParameter("af_dp", "af_dp");
+      onelinkGenerator.setCustomParameter("is_retargeting", "is_retargeting");
+
+      
+      
+      const url = onelinkGenerator.generateUrl();
+
+      // onelink is generated
+     if (url) {
+        document.querySelectorAll("#andrd_link, #ios_link").forEach((e) => {
+            e.setAttribute('href', url);
+        });
+    }
+}
+// })();
+</script>
+  
+</head>
+
+<body>
+  <div id="wrapper">
+    <header>
+      <div id="header">
+        <div class="header_inner cf">
+          <h1 class="header_logo">
+            <a href="/">
+              <span class="hide-text">J-Coin Pay</span>
+            </a>
+          </h1>
+
+          <ul class="pc_menu">
+
+            <li>
+              <a href="/user/shop/" class="txt">
+                使えるお店
+              </a>
+            </li>
+            <li>
+              <a href="/user/bank/" class="txt">
+                利用可能銀行
+              </a>
+            </li>
+            <li>
+              <a href="/user/guide/" class="txt">
+                使い方
+              </a>
+            </li>
+            <li>
+              <a href="/user/faq/" class="txt">
+                よくあるご質問
+              </a>
+            </li>
+            <li>
+              <a href="/informations/" class="txt">
+                お知らせ
+              </a>
+            </li>
+            <li class="btn02">
+              <a href="/shop/" class="txt">
+                店舗さま
+              </a>
+            </li>
+            <li class="btn">
+              <span class="txt btn_txt">
+                その他サービス
+                <div class="btn_txt_hover">
+                  <a href="/biz/" class="">J-Coin Bizについて</a>
+                </div>
+              </span>
+            </li>
+          </ul>
+
+          <a id="menu-trigger-new">
+            <span></span>
+            <span></span>
+            <span></span>
+          </a>
+
+          <div id="nav_wrap_new">
+            <div class="nav_wrap_inner">
+              <nav>
+                <div class="header_menu">
+                  <dl class="header_link">
+                    <dt class="active">
+                      個人のお客さま<span class="cross"></span>
+                    </dt>
+                    <dd style="display:block">
+                      <a href="/">TOP</a>
+
+                      <a href="/user/shop/">使えるお店</a>
+                      <a href="/user/bank/">利用可能銀行</a>
+                      <a href="/user/guide/">使い方</a>
+                      <a href="/user/faq/">よくあるご質問</a>
+                      <a href="/informations/">お知らせ</a>
+                    </dd>
+                  </dl>
+
+                  <dl class="header_link">
+                    <dt>
+                      店舗さま<span class="cross"></span>
+                    </dt>
+                    <dd>
+                      <a href="/shop/">TOP</a>
+                      <a href="/shop/policy/">加盟店情報の取り扱いに関する同意事項</a>
+                      <a href="/shop/terms/">J-Coin Payアプリケーションおよびポータルサイト利用規約</a>
+                      <a href="/shop/financial/">取扱金融機関お問い合わせ一覧</a>
+                      <a href="/shop/faq/">よくあるご質問</a>
+                    </dd>
+                  </dl>
+
+                  <dl class="header_link">
+                    <dt>
+                      その他サービス<span class="cross"></span>
+                    </dt>
+                    <dd>
+                      <a href="/biz/">J-Coin Bizについて</a>
+                    </dd>
+                  </dl>
+
+                  <div class="menu_logo">
+                    <img src="/img/common/logo02.png" alt="" class="">
+                  </div>
+                  <p class="menu_copy">
+                    Copyright (C) 2019 Mizuho Bank, Ltd.
+                  </p>
+                </div>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+    <!-- 		header -->
+    <div id="content">
+      <div id="keyv">
+        <div class="keyvInner">
+          <p class="keyvLogo"><img src="img/logo_keyv.svg" alt="" class=""></p>
+          <p class="keyvImg">
+            <picture>
+              <source media="(max-width:768px)" srcset="img/img_keyv_sp.svg">
+              <img src="img/img_keyv.svg" alt="イベントのわくわくに安心と安全を。J-Coin Payでカンタンにコミケ99でキャッシュレス決済!コミケ99でのお買い物10％ボーナス還元コミケ99期間中はサークル参加者の決済手数料0円現金を用意せずにお買い物できる！">
+            </picture>
+          </p>
+        </div>
+      </div>
+      <section class="section pt0">
+        <h2 class="headline2">
+          <picture>
+            <source media="(max-width:768px)" srcset="img/img_headline_1_sp.svg">
+            <img src="img/img_headline_1.svg" alt="「コミケ99でキャッシュレス決済」するとメリットがいっぱい！">
+          </picture>
+        </h2>
+        <div class="inner">
+          <p class="imgStyle01">
+            <picture>
+              <source media="(max-width:768px)" srcset="img/img_05_sp.svg">
+              <img src="img/img_05.svg" alt="キャッシュレスで感染症対策！スマホ1つでかんたん決済！お釣りの事前準備がいらない！">
+            </picture>
+          </p>
+          <p class="imgBtn"><img src="img/img_btn.svg" alt="さらに！ J-Coin Pay なら"></p>
+          <p class="imgStyle02">
+            <picture>
+              <source media="(max-width:768px)" srcset="img/img_06_sp.svg">
+              <img src="img/img_06.svg" alt="10％作品コミケ99当日J-Coin Payでお買い物をするとご利用金額の10％ボーナス還元！
+              （上限3,000円）推し作家を応援するために、非接触で安心な J-Coin Payを使おう●対象期間：2021年12月30日〜2021年12月31日※本キャンペーンは、予算額に達し次第早期に終了する場合がございます。">
+            </picture>
+          </p>
+
+          <p class="imgStyle03">
+        <img src="img/img_07.png" alt="さらにさらに！アニメイトやとらのあななど！池袋や秋葉原近隣のJ-Coin Pay加盟店拡大中！対象の加盟店はこちら" usemap="#image-map07" class="pcDisplay">
+ 	<img src="img/img_07_sp.png" alt="さらにさらに！アニメイトやとらのあななど！池袋や秋葉原近隣のJ-Coin Pay加盟店拡大中！対象の加盟店はこちら！" usemap="#image-map07-sp" class="spDisplay">
+		<map name="image-map07">
+             	 <area target="_blank" alt="" title="" href="https://j-coin.jp/user/shop/#shop10" coords="874,226,491,165" shape="rect">
+            	</map>
+		<map name="image-map07-sp">
+              	<area target="_blank" alt="" title="" href="https://j-coin.jp/user/shop/#shop10" coords="254,424,628,487" shape="rect">
+           	</map>
+          </p>
+ 		
+        </div>
+        <div class="blockCircle">
+          <p class="imgFull inner">
+            <picture>
+              <source media="(max-width:768px)" srcset="img/img_04_sp.svg">
+              <img src="img/img_04.svg" alt="キャッシュレス決済で安全でお得なコミケをみんなでつくれます">
+            </picture>
+          </p>
+        </div>
+        <div class="blockRectangle">
+          <p class="imgFull02 inner">
+            <img src="img/img_03.png" alt="J-Coin Payをダウンロードして ぜひご利用ください！" usemap="#image-map03" class="pcDisplay">
+            <img src="img/img_03_sp.png" alt="J-Coin Payをダウンロードして ぜひご利用ください！" usemap="#image-map03-sp" class="spDisplay">
+            <map name="image-map03">
+              <area target="_blank" alt="" title="" href="https://jcoinlp.onelink.me/l43A?pid=COMI&c=comike" coords="314,216,406,305" shape="rect">
+              <area target="_blank" alt="" title="" href="https://jcoinlp.onelink.me/l43A?pid=COMI&c=comike" coords="480,215,570,307" shape="rect">
+            </map>
+            <map name="image-map03-sp">
+              <area target="_blank" alt="" title="" href="https://jcoinlp.onelink.me/l43A?pid=COMI&c=comike" coords="4,227,310,285" shape="rect">
+              <area target="_blank" alt="" title="" href="https://jcoinlp.onelink.me/l43A?pid=COMI&c=comike" coords="2,291,308,347" shape="rect">
+            </map>
+          </p>
+        </div>
+        <div class="inner">
+          <h2 class="imgText03"><img src="img/img_headline_2.svg" alt="一般参加者特典 キャンペーン応募 の手順"></h2>
+          <p class="imgText02"><img src="img/img_text_02.svg" alt="アプリに口座登録する"></p>
+          <p class="imgText01">
+            <img src="img/img_01.png" alt="J-Coin Payアプリを ダウンロード ユーザー情報を 登録 金融機関口座 登録" usemap="#image-map01" class="pcDisplay">
+            <img src="img/img_01_sp.png" alt="J-Coin Payアプリを ダウンロード ユーザー情報を 登録 金融機関口座 登録" usemap="#image-map01-sp" class="spDisplay">
+            <map name="image-map01">
+              <area target="_blank" alt="" title="" href="https://jcoinlp.onelink.me/l43A?pid=COMI&c=comike" coords="61,551,159,651" shape="rect">
+              <area target="_blank" alt="" title="" href="https://jcoinlp.onelink.me/l43A?pid=COMI&c=comike" coords="300,649,200,551" shape="rect">
+            </map>
+            <map name="image-map01-sp">
+              <area target="_blank" alt="" title="" href="https://jcoinlp.onelink.me/l43A?pid=COMI&c=comike" coords="138,122,406,179" shape="rect">
+              <area target="_blank" alt="" title="" href="https://jcoinlp.onelink.me/l43A?pid=COMI&c=comike" coords="138,187,407,245" shape="rect">
+            </map>
+          </p>
+          <p class="arrowDown"><img src="img/img_arrow_down.svg" alt=""></p>
+          <p class="imgText02 w900"><img src="img/img_text_03.svg" alt="イベント準備完了！"></p>
+          <p class="arrowDown marginBot"><img src="img/img_arrow_down.svg" alt=""></p>
+        </div>
+        <div class="blockRound">
+          <p class="imgFull01 inner">
+            <picture>
+              <source media="(max-width:768px)" srcset="img/img_02_sp.svg">
+              <img src="img/img_02.svg" alt="サークルでのお買い物をJ-Coin Payで購入するとコミケ99開催期間中のご利用金額の10％還元！（上限３,０００円）">
+            </picture>
+          </p>
+        </div>
+      </section>
+      <section class="section">
+        <div class="inner">
+          <h2 class="headline3">注意事項</h2>
+          <div class="regulationBlock">
+            <div class="content">
+              <p>本キャンペーンは予告なく内容の変更や中止となることがあります。(予算額に達し次第早期に終了する場合がございます。)また、本キャンペーン内容はみずほ銀行の判断により随時変更することができるものとします。この場合、本キャンペーンサイトなどに掲載することにより、変更内容を随時告知いたします。あらかじめご了承ください。</p>
+              <p>不正な利用とみずほ銀行が判断した場合は、ボーナスの権利は無効となりますのでご了承ください。</p>
+              <p>ボーナスの有効期限は付与された月から3ヶ月後の月末です。お早めにご利用ください。</p>
+              <p>ボーナスの付与までに、J-Coin Payのアカウントを解約もしくはご利用端末の電話番号を変更した場合、ボーナス対象外となります。</p>
+              <p>アプリのダウンロードおよびご利用には、別途通信費用等が発生し、お客さまのご負担となります。</p>
+              <p>J-Coin Payは、みずほ銀行が提供する送金・決済アプリです。連携する金融機関の預金口座保有者は、個人間の送金や店舗での支払い、預金口座との入出金(チャージ/口座に戻す)等のサービスが利用できます。</p>
+              <p>画像はすべてイメージです。</p>
+              <p>iPhone、Apple Watchは、米国および他の国々で登録されたApple Inc.の商標です。iPhoneの商標は、アイホン株式会社のライセンスに基づき使用されています。App Storeは、Apple Inc.のサービスマークです。</p>
+              <p>Android・Google PlayはGoogle Inc.の商標または登録商標です。</p>
+              <p>対応OSはiOS10以上、Android6以上となります。なお、タブレットやiPadでの動作保証はいたしかねます。</p>
+              <p>本アプリは決済機能を有していますので、セキュリティ等に十分注意し、スマートフォンおよびログインパスワード等を厳重に管理してください。</p>
+              <p>「コミックマーケット」、「コミケット」、「コミケ」は有限会社コミケットの登録商標です。</p>
+              <p>QRコードは(株)デンソーウェーブの登録商標です。</p>
+            </div>
+          </div>
+          <div class="btnBlock">
+            <a class="btnCommon" href="https://j-coin.jp/">
+              <picture>
+                <source media="(max-width:768px)" srcset="img/img_button_sp.svg">
+                <img src="img/img_button.svg" alt="詳しくはJ-Coin Payの公式サイトをチェック！">
+              </picture>
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
+    <footer>
+      <div class="footer_top">
+        <div class="inner">
+          <ul class="footer_link">
+            <li>
+              <a href="https://j-coin.jp/" class="button_new font_noto">J-Coin Pay トップページ</a>
+            </li>
+            <li>
+              <dl class="dl_link">
+                <dt>
+                  <img src="img/ttl-dl.svg" alt="J-Coin ダウンロードはこちら">
+                </dt>
+                <dd>
+                  <a href="https://jcoinlp.onelink.me/l43A?pid=COMI&c=comike" target="_blank">
+                    <img src="img/btn-gp.png" alt="Google Play で手に入れよう">
+                  </a>
+                  <a href="https://jcoinlp.onelink.me/l43A?pid=COMI&c=comike" target="_blank">
+                    <img src="img/btn-as.png" alt="App Store からダウンロード">
+                  </a>
+                </dd>
+              </dl>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer_middle">
+        <div class="inner">
+          <p> <a class="phone" href="tel:0120324367"><img src="img/ttl-contact2.svg" alt="J-Coin Payについてのお問い合せ お問い合わせ 0120-324-367 受付時間 9:00～21:00 （土日祝除く）"></a></p>
+        </div>
+      </div>
+      <div id="footer" class="cf">
+        <div class="footer_inner">
+          <dl class="footer_link">
+            <dt>個人のお客さま<span class="cross"></span></dt>
+            <dd>
+              <a href="/">TOP</a>
+              <a href="/user/guide/">使い方</a>
+              <a href="/user/shop/">使えるお店</a>
+              <a href="/user/bank/">利用可能銀行</a>
+              <a href="/user/faq/">よくあるご質問</a>
+              <a href="/informations/">お知らせ</a>
+              <a href="/user/campaign/">キャンペーン一覧</a>
+              <a href="/user/policy/">ユーザー情報の取り扱いに関する同意事項</a>
+              <a href="/user/terms/">J-Coin Payユーザー利用規約</a>
+              <a href="/user/terms/lite/">J-Coin Liteユーザー利用規約</a>
+              <a href="https://www.mizuhobank.co.jp/socialmedia/kiyaku/index.html" target="_blank">ソーシャルメディア利用規約</a>
+              <a href="/mynumberpoint/terms/">J-Coin Payにおけるマイナポイント特約</a>
+              <a href="/user/bill-payment/terms/">J-Coin請求書払いに関する特約</a>
+              <a href="/user/identification/">標準上限金額適用お申込み</a>
+            </dd>
+          </dl>
+
+          <dl class="footer_link">
+            <dt>店舗さま<span class="cross"></span></dt>
+            <dd>
+              <a href="/shop/">TOP</a>
+              <a href="/shop/policy/">加盟店情報の取り扱いに関する同意事項</a>
+              <a href="/shop/terms/">J-Coin Payアプリケーションおよびポータルサイト利用規約</a>
+              <a href="/shop/financial/">取扱金融機関お問い合わせ一覧</a>
+              <a href="/shop/faq/">よくあるご質問</a>
+            </dd>
+          </dl>
+
+          <dl class="footer_link">
+            <dt>その他サービス<span class="cross"></span></dt>
+            <dd>
+              <a href="/biz/" class="">J-Coin Bizについて</a>
+            </dd><br>
+            <dt><a href="/sitemap/">サイトマップ<span class="cross"></span></a></dt>
+          </dl>
+
+        </div>
+        <p class="footer_copy">
+          <small class="">Copyright (C) 2019 Mizuho Bank, Ltd.</small>
+          <span class="footer_offer">提供元：株式会社みずほ銀行<br>住所：東京都千代田区大手町1-5-5</span>
+        </p>
+      </div>
+      <div class="footer_banner pcDisplay">
+        <a id="ios_link" href="https://jcoinlp.onelink.me/l43A?pid=COMI&c=comike" class="link">
+          <span class="text">ダウンロードは<br>こちら</span>
+          <span class="image"><img src="img/qr_code.png" alt=""></span>
+        </a>
+      </div>
+      <div class="footer_banner spDisplay">
+        <a id="ios_link" href="https://jcplite.onelink.me/oLHI/2383a57d" class="link androidSp">
+          <span class="text">ダウンロードはこちら</span>
+          <span class="arrow"><img src="img/icon_arrow.png" alt=""></span>
+          <span class="image sp"><img src="img/btn-gp.png" alt="Google Play で手に入れよう"></span>
+        </a>
+        <a id="ios_link" href="https://jcplite.onelink.me/oLHI/2383a57d" class="link iosSp">
+          <span class="text">ダウンロードはこちら</span>
+          <span class="arrow"><img src="img/icon_arrow.png" alt=""></span>
+          <span class="image"><img src="img/btn-as.png" alt="App Store からダウンロード"></span>
+        </a>
+      </div>
+    </footer>
+  </div>
+  <!-- wrapper -->
+  <script src="js/vendor.js"></script>
+  <script src="js/script.js"></script>
+  <script src="js/jquery.rwdImageMaps.min.js"></script>
+  <script async src="https://s.yimg.jp/images/listing/tool/cv/ytag.js"></script>
+  <script>
+    window.yjDataLayer = window.yjDataLayer || [];
+
+    function ytag() {
+      yjDataLayer.push(arguments);
+    }
+    ytag({
+      "type": "yjad_retargeting",
+      "config": {
+        "yahoo_retargeting_id": "PR2OW9OHUQ",
+        "yahoo_retargeting_label": ""
+        /*,
+        "yahoo_retargeting_page_type": "",
+        "yahoo_retargeting_items":[
+        {item_id: '', category_id: '', price: '', quantity: ''}
+        ]*/
+      }
+    });
+  </script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+</body>
+
+</html>
